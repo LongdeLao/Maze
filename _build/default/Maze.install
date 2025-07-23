@@ -1,0 +1,11 @@
+lib: [
+  "_build/install/default/lib/Maze/META"
+  "_build/install/default/lib/Maze/dune-package"
+  "_build/install/default/lib/Maze/opam"
+]
+bin: [
+  "_build/install/default/bin/Maze"
+]
+doc: [
+  "_build/install/default/doc/Maze/README.md"
+]
