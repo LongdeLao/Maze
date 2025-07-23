@@ -13,6 +13,7 @@ depends: [
   "dune" {>= "3.1"}
   "tsdl"
   "tsdl-image"
+  "alcotest" {with-test}
 ]
 build: [
   ["dune" "subst"] {dev}

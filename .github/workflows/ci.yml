@@ -33,7 +33,7 @@ jobs:
         run: opam install . --deps-only -y
 
       - name: Build
-        run: eval $(opam env) && dune build
+        run: eval $(opam env) && dune build --only-packages=Maze
 
       - name: Run executable under headless X server
         run: |
