@@ -19,7 +19,7 @@
  (name Maze)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml)
+ (depends ocaml dune tsdl tsdl-image)
  (tags
   ("add topics" "to describe" your project)))
 
