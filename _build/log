@@ -1,6 +1,16 @@
-# dune init project Maze
+# dune exec ./main.exe
 # OCAMLPARAM: unset
 # Shared cache: enabled-except-user-rules
 # Shared cache location: /Users/longde/.cache/dune/db
 # Workspace root: /Users/longde/Desktop/Maze
 # Auto-detected concurrency: 12
+# Dune context:
+#  { name = "default"
+#  ; kind = "default"
+#  ; profile = Dev
+#  ; merlin = true
+#  ; fdo_target_exe = None
+#  ; build_dir = In_build_dir "default"
+#  ; instrument_with = []
+#  }
+$ /Users/longde/.opam/default/bin/ocamlc.opt -config > /var/folders/5d/brpn3kqd6td5gmf3drh_v_rm0000gp/T/dune_bb58fb_output

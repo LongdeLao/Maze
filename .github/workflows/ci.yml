@@ -1,0 +1,26 @@
+name: OCaml CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: '4.14.0' # Or your desired version
+
+    - name: Install dependencies
+      run: opam install . --deps-only --with-test
+
+    - name: Run tests
+      run: dune runtest 
