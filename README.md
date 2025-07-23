@@ -1,6 +1,6 @@
 # Maze Generator
 
-![Maze Generator Icon](icon.png)
+<img src="icon.png" alt="Maze Generator Icon" width="128"/>
 
 A simple maze generator built with OCaml and SDL2. This project serves as a good example of how to build a graphical application in OCaml, including handling dependencies and creating a containerized build with Docker.
 
