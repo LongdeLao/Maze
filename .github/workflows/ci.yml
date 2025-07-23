@@ -18,7 +18,7 @@ jobs:
       uses: ocaml/setup-ocaml@v2
       with:
         ocaml-compiler: '4.14.0' # Or your desired version
-        depext-tools: ''
+        opam-depext: false
 
     - name: Install dependencies
       run: opam install . --deps-only --with-test
