@@ -18,11 +18,11 @@ jobs:
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-version: 5.1.0
+          ocaml-compiler: 5.1.0
           dune-cache: true
 
       - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev xvfb
+        run: sudo apt-get update && sudo apt-get install -y libsdl2-dev libsdl2-image-dev xvfb
 
       - name: Install opam dependencies
         run: opam install . --deps-only -y
