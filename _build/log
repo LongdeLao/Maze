@@ -1,0 +1,6 @@
+# dune init project Maze
+# OCAMLPARAM: unset
+# Shared cache: enabled-except-user-rules
+# Shared cache location: /Users/longde/.cache/dune/db
+# Workspace root: /Users/longde/Desktop/Maze
+# Auto-detected concurrency: 12
