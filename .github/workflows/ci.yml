@@ -33,11 +33,11 @@ jobs:
         run: opam install . --deps-only -y
 
       - name: Build
-        run: dune build
+        run: eval $(opam env) && dune build
 
       - name: Run executable under headless X server
         run: |
-          xvfb-run -s "-screen 0 1024x768x16" dune exec bin/main.exe
+          eval $(opam env) && xvfb-run -s "-screen 0 1024x768x16" dune exec bin/main.exe
 
       - name: Mark success
         run: echo "1/1" 
