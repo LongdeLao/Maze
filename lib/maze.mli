@@ -1,3 +1,4 @@
+(** A cell in the maze *)
 type cell = {
   mutable visited: bool;
   mutable top_wall: bool;
@@ -6,6 +7,7 @@ type cell = {
   mutable left_wall: bool;
 }
 
+(** A maze with cells and start/end points *)
 type maze = {
   width: int;
   height: int;
@@ -16,27 +18,11 @@ type maze = {
   mutable end_y: int;
 }
 
-(* Make a new cell with all walls *)
-let create_cell () = {
-  visited = false;
-  top_wall = true;
-  right_wall = true;
-  bottom_wall = true;
-  left_wall = true;
-}
+(** Create a new cell with all walls *)
+val create_cell : unit -> cell
 
-(* Make an empty maze grid *)
-let create_maze width height =
-  let cells = Array.init width (fun _ -> Array.init height (fun _ -> create_cell ())) in
-  let start_x = 0 in
-  let start_y = 0 in
-  let end_x = width - 1 in
-  let end_y = height - 1 in
-  { width; height; cells; start_x; start_y; end_x; end_y }
+(** Create an empty maze grid *)
+val create_maze : int -> int -> maze
 
-(* Get a cell if it exists *)
-let get_cell maze x y =
-  if x >= 0 && x < maze.width && y >= 0 && y < maze.height then
-    Some maze.cells.(x).(y)
-  else
-    None
+(** Get a cell if it exists *)
+val get_cell : maze -> int -> int -> cell option
