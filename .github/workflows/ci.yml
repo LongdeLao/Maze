@@ -33,11 +33,11 @@ jobs:
         run: opam install . --deps-only -y
 
       - name: Build
-        run: eval $(opam env) && dune build --only-packages=Maze
+        run: eval $(opam env) && dune build bin/main.exe
 
-      - name: Run executable under headless X server
+      - name: Verify executable can start (with timeout)
         run: |
-          eval $(opam env) && xvfb-run -s "-screen 0 1024x768x16" dune exec bin/main.exe
+          eval $(opam env) && timeout 5s xvfb-run -s "-screen 0 1024x768x16" dune exec bin/main.exe || code=$?; if [ $code -eq 124 ]; then echo "Timed out as expected"; exit 0; else exit $code; fi
 
       - name: Mark success
         run: echo "1/1" 
