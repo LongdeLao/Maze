@@ -1,5 +1,6 @@
 (executable
  (public_name Maze)
  (name main)
- (libraries Maze lablgtk3)
- (flags (:standard -w -33-6)))
+ (libraries Maze))
+ (libraries lablgtk3)
+ (flags (:standard -w -33-6))
