@@ -5,6 +5,7 @@ type cell = {
   mutable bottom_wall: bool;
   mutable left_wall: bool;
 }
+(**)
 
 type maze = {
   width: int;
