@@ -28,6 +28,7 @@ let draw renderer =
   
   (* Border *)
   Sdl.render_draw_line renderer 0 0 win_size 0 |> ignore;
+
   Sdl.render_draw_line renderer win_size 0 win_size win_size |> ignore;
   Sdl.render_draw_line renderer win_size win_size 0 win_size |> ignore;
   Sdl.render_draw_line renderer 0 win_size 0 0 |> ignore;
