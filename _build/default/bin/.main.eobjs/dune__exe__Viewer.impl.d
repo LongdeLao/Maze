@@ -1,1 +1,1 @@
-bin/viewer.ml: Array Generator Int32 List Maze Sdl Tsdl
+bin/viewer.ml: Array Backtracking Int32 List Maze Sdl Tsdl

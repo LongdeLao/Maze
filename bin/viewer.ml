@@ -1,5 +1,5 @@
 open Tsdl
-open Generator
+open Backtracking
 
 let rec take n lst = if n<=0 then [] else match lst with []->[] | x::tl -> x :: take (n-1) tl
 
@@ -44,8 +44,8 @@ let run size base_delay =
         let px,py = x*cell_px,y*cell_px in
         let bg =
           if not c.Maze.visited then (240,240,240)
-          else if x = !Generator.current_x && y = !Generator.current_y then
-            if !Generator.is_backtracking then (255,100,100) else (0,220,0)
+          else if x = !Backtracking.current_x && y = !Backtracking.current_y then
+            if !Backtracking.is_backtracking then (255,100,100) else (0,220,0)
           else (255,255,255) in
         let r,g,b = bg in
         draw_rect r g b 255 renderer (Sdl.Rect.create ~x:px ~y:py ~w:cell_px ~h:cell_px);
@@ -59,7 +59,7 @@ let run size base_delay =
     (* trail circles *)
     List.iteri (fun i (x,y) ->
       let alpha = 255 - i*4 in
-      let col = if !Generator.is_backtracking then (255,150,50,alpha) else (100,180,255,alpha) in
+      let col = if !Backtracking.is_backtracking then (255,150,50,alpha) else (100,180,255,alpha) in
       circle renderer (x*cell_px+cell_px/2) (y*cell_px+cell_px/2) (cell_px/6) col
     ) !trail;
     (* start/end *)
@@ -78,13 +78,13 @@ let run size base_delay =
       | Error _ -> ()
       | Ok ren ->
         let cb () =
-          add_trail !Generator.current_x !Generator.current_y;
+          add_trail !Backtracking.current_x !Backtracking.current_y;
           draw ren;
           let ev = Sdl.Event.create () in
           while Sdl.poll_event (Some ev) do if Sdl.Event.get ev Sdl.Event.typ = Sdl.Event.quit then exit 0 done;
           Sdl.delay (Int32.of_int base_delay)
         in
-        ignore (Generator.generate maze ~render_callback:cb ());
+        ignore (Backtracking.generate maze ~render_callback:cb ());
         draw ren;
         let e = Sdl.Event.create () in
         let rec loop () =
