@@ -1,0 +1,47 @@
+<!--
+Distributed under the MIT software license. See the accompanying
+file LICENSE or https://opensource.org/license/mit/.
+-->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<title>Wilson's Algorithm for Maze Generation</title>
+</head>
+<body>
+<br/>
+<button id="generateMaze">Generate Maze!</button>
+<script src="wilson.js"></script>
+<script src="mazeCanvas.js"></script>
+<script>
+// the underscore is for testing of avoiding global variable usage
+const vertexX_ = 20,
+    vertexY_ = 20,
+    cellPixel_ = 15,
+    animateDelay_ = 25,
+    blankColor_ = 'black',
+    onColors_ = {
+        frontColor: 'white',
+        extraColor: '#5588ee'
+    },
+    buttonId_ = 'generateMaze',
+    domLocation_ = document.body.childNodes[0];
+
+let canvasObj_ = createCanvasObj(vertexX_, vertexY_, cellPixel_,
+                                 animateDelay_, blankColor_, domLocation_);
+
+// handle click boilerplate
+document.getElementById(buttonId_).onclick = () => {
+    if (canvasObj_.justEvented) return;
+
+    if (canvasObj_.running) {
+        canvasObj_.running = false;   // re-initialization happens at reDraw()
+    } else {
+        initDraw(canvasObj_, blankColor_, onColors_, wilsonStart, wilsonLoop);
+    }
+
+    canvasObj_.justEvented = true;
+};
+</script>
+</body>
+</html>

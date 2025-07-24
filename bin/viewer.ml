@@ -1,5 +1,6 @@
 open Tsdl
 open Backtracking
+open Wilson
 
 let rec take n lst = if n<=0 then [] else match lst with []->[] | x::tl -> x :: take (n-1) tl
 
@@ -21,7 +22,7 @@ let circle renderer cx cy radius (r,g,b,a) =
     done
   done
 
-let run size base_delay =
+let run size base_delay algorithm =
   let cell_px = (win_size-1)/size in
   let maze = Maze.create_maze size size in
   let trail = ref [] in
@@ -46,6 +47,8 @@ let run size base_delay =
           if not c.Maze.visited then (240,240,240)
           else if x = !Backtracking.current_x && y = !Backtracking.current_y then
             if !Backtracking.is_backtracking then (255,100,100) else (0,220,0)
+          else if algorithm = "wilson" && x = !Wilson.current_x && y = !Wilson.current_y then
+            if !Wilson.is_path_building then (100,100,255) else (0,220,0)
           else (255,255,255) in
         let r,g,b = bg in
         draw_rect r g b 255 renderer (Sdl.Rect.create ~x:px ~y:py ~w:cell_px ~h:cell_px);
@@ -56,12 +59,50 @@ let run size base_delay =
         if c.Maze.left_wall then draw_line renderer px py px (py+cell_px);
       done
     done;
+    
+    (* Draw the current path for Wilson's algorithm *)
+    if algorithm = "wilson" && !Wilson.is_path_building then begin
+      let path = !Wilson.current_path in
+      (* Draw lines connecting path cells - draw first to put circles on top *)
+      let rec draw_path_lines = function
+        | [] | [_] -> ()
+        | (x1, y1)::(x2, y2)::rest ->
+            let px1 = x1 * cell_px + cell_px / 2 in
+            let py1 = y1 * cell_px + cell_px / 2 in
+            let px2 = x2 * cell_px + cell_px / 2 in
+            let py2 = y2 * cell_px + cell_px / 2 in
+            Sdl.set_render_draw_color renderer 50 100 255 200 |> ignore;
+            draw_line renderer px1 py1 px2 py2;
+            draw_path_lines ((x2, y2)::rest)
+      in
+      draw_path_lines path;
+      
+      (* Draw circle for each cell in path *)
+      List.iteri (fun i (x, y) ->
+        let px = x * cell_px + cell_px / 2 in
+        let py = y * cell_px + cell_px / 2 in
+        let radius = if i = 0 then cell_px/3 else cell_px/5 in
+        let color = if i = 0 then (0,180,255,230) else (100,150,255,200) in
+        circle renderer px py radius color
+      ) path;
+    end;
+    
     (* trail circles *)
     List.iteri (fun i (x,y) ->
       let alpha = 255 - i*4 in
-      let col = if !Backtracking.is_backtracking then (255,150,50,alpha) else (100,180,255,alpha) in
-      circle renderer (x*cell_px+cell_px/2) (y*cell_px+cell_px/2) (cell_px/6) col
+      let col = 
+        if algorithm = "backtracking" && !Backtracking.is_backtracking then 
+          (255,150,50,alpha) 
+        else if algorithm = "wilson" && !Wilson.is_path_building then
+          (100,150,255,alpha)
+        else 
+          (100,180,255,alpha) 
+      in
+      (* Only show trail for non-wilson or when not path building *)
+      if algorithm != "wilson" || not !Wilson.is_path_building then
+        circle renderer (x*cell_px+cell_px/2) (y*cell_px+cell_px/2) (cell_px/6) col
     ) !trail;
+    
     (* start/end *)
     circle renderer (maze.Maze.start_x*cell_px+cell_px/2) (maze.Maze.start_y*cell_px+cell_px/2) (cell_px/4) (255,0,0,255);
     circle renderer (maze.Maze.end_x*cell_px+cell_px/2) (maze.Maze.end_y*cell_px+cell_px/2) (cell_px/4) (255,0,0,255);
@@ -78,13 +119,23 @@ let run size base_delay =
       | Error _ -> ()
       | Ok ren ->
         let cb () =
-          add_trail !Backtracking.current_x !Backtracking.current_y;
+          let current_x, current_y = 
+            if algorithm = "backtracking" then
+              (!Backtracking.current_x, !Backtracking.current_y)
+            else
+              (!Wilson.current_x, !Wilson.current_y)
+          in
+          add_trail current_x current_y;
           draw ren;
           let ev = Sdl.Event.create () in
           while Sdl.poll_event (Some ev) do if Sdl.Event.get ev Sdl.Event.typ = Sdl.Event.quit then exit 0 done;
           Sdl.delay (Int32.of_int base_delay)
         in
-        ignore (Backtracking.generate maze ~render_callback:cb ());
+        begin
+          match algorithm with
+          | "wilson" -> ignore (Wilson.generate maze ~render_callback:cb ())
+          | _ -> ignore (Backtracking.generate maze ~render_callback:cb ()) (* default to backtracking *)
+        end;
         draw ren;
         let e = Sdl.Event.create () in
         let rec loop () =

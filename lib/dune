@@ -1,3 +1,5 @@
 (library
  (name Maze)
+ (modules maze backtracking wilson)
+ (flags (:standard -w -27-32-33))
  (wrapped false))
