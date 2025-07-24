@@ -2,9 +2,17 @@ open Tsdl
 open Tsdl_image
 
 (* Basic setup *)
-let size = 20
-let cell_px = 30
-let win_size = size * cell_px + 1
+let size =
+  let default_size = 20 in
+  if Array.length Sys.argv = 2 then
+    try int_of_string Sys.argv.(1)
+    with Failure _ ->
+      Printf.eprintf "Invalid size '%s', using default %d\n%!" Sys.argv.(1) default_size;
+      default_size
+  else
+    default_size
+let win_size = 801
+let cell_px = (win_size - 1) / size
 
 (* Create maze *)
 let maze = Maze.create_maze size size

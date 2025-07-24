@@ -48,7 +48,6 @@ sudo apt-get install libsdl2-dev libsdl2-image-dev
 ```
 
 ### Building and Running Locally
-
 1.  **Install OCaml dependencies:**
     ```bash
     opam install . --deps-only -y
@@ -56,7 +55,11 @@ sudo apt-get install libsdl2-dev libsdl2-image-dev
 
 2.  **Build and run the application:**
     ```bash
-    dune exec bin/main.exe
+    dune exec bin/main.exe -- [SIZE]
+    ```
+    Where `[SIZE]` is the optional number of cells per side (default 20). For example, to generate a 30×30 maze:
+    ```bash
+    dune exec bin/main.exe -- 30
     ```
 
 ### Building and Running with Docker
