@@ -1,7 +1,9 @@
+(include_subdirs unqualified)
+
 (library
- (name Maze)
- (modules maze animate backtracking wilson bench_timer)
- (libraries)
- (foreign_stubs (language c) (names bench_timer_stubs))
+ (name maze)
+ (public_name Maze)
+ (libraries lwt lwt.unix)
  (flags (:standard -w -27-32-33))
+ (preprocess (pps lwt_ppx))
  (wrapped false))

@@ -2,12 +2,12 @@
  (public_name Maze)
  (name main)
  (modules main viewer)
- (libraries Maze tsdl tsdl-image)
- (flags (:standard -w -33-6)))
+ (libraries Maze bench_timer tsdl tsdl-image tsdl-ttf)
+ (flags (:standard -w -33-6-21)))
 
 (executable
  (public_name Maze_bench)
  (name benchmark)
  (modules benchmark)
- (libraries Maze)
+ (libraries Maze bench_timer)
  (flags (:standard -w -33)))

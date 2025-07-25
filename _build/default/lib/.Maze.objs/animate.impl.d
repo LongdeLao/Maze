@@ -1,1 +1,1 @@
-lib/animate.ml: Maze
+lib/graphics/animate.pp.ml: Maze

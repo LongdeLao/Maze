@@ -41,3 +41,46 @@ let get_cell maze x y =
     Some maze.cells.(x).(y)
   else
     None
+
+let solve_maze maze =
+  let directions = [ (0, -1); (1, 0); (0, 1); (-1, 0) ] in
+  let visited = Array.init maze.width (fun _ -> Array.init maze.height (fun _ -> false)) in
+  let parent = Hashtbl.create (maze.width * maze.height) in
+  let queue = Queue.create () in
+  let start = (maze.start_x, maze.start_y) in
+  let goal = (maze.end_x, maze.end_y) in
+  Queue.add start queue;
+  visited.(fst start).(snd start) <- true;
+  let found = ref false in
+  while not !found && not (Queue.is_empty queue) do
+    let (x, y) = Queue.take queue in
+    if (x, y) = goal then found := true else
+      List.iter (fun (dx, dy) ->
+        let nx, ny = x + dx, y + dy in
+        if nx >= 0 && nx < maze.width && ny >= 0 && ny < maze.height && not visited.(nx).(ny) then
+          match get_cell maze nx ny with
+          | Some cell ->
+              let no_wall =
+                match (dx, dy) with
+                | (0, -1) -> not maze.cells.(x).(y).top_wall
+                | (1, 0) -> not maze.cells.(x).(y).right_wall
+                | (0, 1) -> not maze.cells.(x).(y).bottom_wall
+                | (-1, 0) -> not maze.cells.(x).(y).left_wall
+                | _ -> false in
+              if no_wall then (
+                visited.(nx).(ny) <- true;
+                Hashtbl.add parent (nx, ny) (x, y);
+                Queue.add (nx, ny) queue
+              )
+          | None -> ()
+      ) directions
+  done;
+  if not !found then []
+  else
+    let path = ref [] in
+    let current = ref goal in
+    while !current <> start do
+      path := !current :: !path;
+      current := Hashtbl.find parent !current
+    done;
+    start :: !path

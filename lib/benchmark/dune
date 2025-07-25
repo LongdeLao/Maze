@@ -1,0 +1,7 @@
+(include_subdirs no)
+ 
+(library
+ (name bench_timer)
+ (modules bench_timer)
+ (foreign_stubs (language c) (names bench_timer_stubs))
+ (wrapped false)) 

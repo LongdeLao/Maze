@@ -1,0 +1,6 @@
+description = ""
+requires = "lwt lwt.unix"
+archive(byte) = "maze.cma"
+archive(native) = "maze.cmxa"
+plugin(byte) = "maze.cma"
+plugin(native) = "maze.cmxs"

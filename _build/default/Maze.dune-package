@@ -1,7 +1,64 @@
 (lang dune 3.19)
 (name Maze)
-(sections (lib .) (bin ../../bin) (doc ../../doc/Maze))
+(sections (lib .) (libexec .) (bin ../../bin) (doc ../../doc/Maze))
 (files
- (lib (META dune-package opam))
+ (lib
+  (META
+   algorithms/backtracking.ml
+   algorithms/eller.ml
+   algorithms/wilson.ml
+   animate.cmi
+   animate.cmt
+   animate.cmx
+   backtracking.cmi
+   backtracking.cmt
+   backtracking.cmx
+   dune-package
+   eller.cmi
+   eller.cmt
+   eller.cmx
+   graphics/animate.ml
+   maze.a
+   maze.cma
+   maze.cmi
+   maze.cmt
+   maze.cmx
+   maze.cmxa
+   maze.ml
+   opam
+   wilson.cmi
+   wilson.cmt
+   wilson.cmx))
+ (libexec (maze.cmxs))
  (bin (Maze Maze_bench))
  (doc (README.md)))
+(library
+ (name Maze)
+ (kind normal)
+ (archives (byte maze.cma) (native maze.cmxa))
+ (plugins (byte maze.cma) (native maze.cmxs))
+ (native_archives maze.a)
+ (requires lwt lwt.unix)
+ (modes byte native)
+ (modules
+  (unwrapped
+   (module
+    (obj_name animate)
+    (visibility public)
+    (source (path Animate) (impl (path graphics/animate.ml))))
+   (module
+    (obj_name backtracking)
+    (visibility public)
+    (source (path Backtracking) (impl (path algorithms/backtracking.ml))))
+   (module
+    (obj_name eller)
+    (visibility public)
+    (source (path Eller) (impl (path algorithms/eller.ml))))
+   (module
+    (obj_name maze)
+    (visibility public)
+    (source (path Maze) (impl (path maze.ml))))
+   (module
+    (obj_name wilson)
+    (visibility public)
+    (source (path Wilson) (impl (path algorithms/wilson.ml)))))))

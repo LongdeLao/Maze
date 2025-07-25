@@ -1,0 +1,185 @@
+\documentclass[twocolumn,10pt]{article}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{mathtools}
+\usepackage{enumerate}
+\usepackage[margin=0.75in]{geometry}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+
+\title{Mathematical Analysis of Wilson's Algorithm\\for Uniform Spanning Trees}
+\author{}
+\date{}  
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We present a mathematical analysis of Wilson's algorithm, which generates uniform spanning trees using loop-erased random walks. We derive the hitting probabilities, expected path lengths, and convergence properties, with particular focus on grid graphs for maze generation. Our results demonstrate why the first path typically exhibits $\Theta(n\log n)$ complexity while subsequent paths converge significantly faster.
+\end{abstract}
+
+\section{Preliminaries}
+
+\subsection{Definitions}
+
+Let $G = (V, E)$ be an undirected graph where:
+\begin{align}
+V &= \{(x, y) \mid 0 \leq x < w, 0 \leq y < h\}\\
+E &= \{((x, y), (x', y')) \mid |x - x'| + |y - y'| = 1\}
+\end{align}
+
+A spanning tree $T = (V, E')$ satisfies:
+\begin{align}
+V(T) &= V(G)\\
+|E'| &= |V| - 1\\
+T \text{ is connected}
+\end{align}
+
+A uniform spanning tree (UST) is drawn from the uniform distribution over all spanning trees of $G$.
+
+\subsection{Loop-Erased Random Walk}
+
+For a random walk $(X_0, X_1, X_2, \ldots)$ with $X_0 = v$, its loop-erased version $(Y_0, Y_1, \ldots)$ is:
+\begin{align}
+Y_0 &= X_0 = v\\
+\sigma(i) &= \max\{j < i : X_j \neq X_i\}\\
+Y_i &= X_{\sigma^i(0)}
+\end{align}
+
+\section{Wilson's Algorithm}
+
+\subsection{Algorithm Formulation}
+
+Given a graph $G=(V,E)$:
+
+\begin{algorithm}[H]
+\caption{Wilson's Algorithm}
+\begin{algorithmic}[1]
+\State $T \gets \{v_0\}$ for arbitrary $v_0 \in V$
+\State $U \gets V \setminus \{v_0\}$ 
+\While{$U \neq \emptyset$}
+    \State Select $u \in U$
+    \State $P \gets \text{LERW}(u, T)$ \Comment{Loop-erased path from $u$ to $T$}
+    \State $T \gets T \cup P$
+    \State $U \gets U \setminus P$
+\EndWhile
+\State \Return $T$ 
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Properties}
+
+\begin{theorem}[Uniformity]
+Wilson's algorithm generates a spanning tree $T$ with probability:
+\begin{equation}
+\mathbb{P}(T) = \frac{1}{|ST(G)|}
+\end{equation}
+where $ST(G)$ is the set of all spanning trees of $G$.
+\end{theorem}
+
+\begin{lemma}
+For any unvisited vertex $u$ and any spanning tree $T_u$ of the subgraph induced by $T \cup \{u\}$:
+\begin{equation}
+\mathbb{P}(\text{LERW}(u, T) = T_u \setminus T) = \frac{1}{d(u)}
+\end{equation}
+where $d(u)$ is the degree of $u$.
+\end{lemma}
+
+\section{Mathematical Analysis}
+
+\subsection{Hitting Probabilities}
+
+For a vertex $v_i \not\in T$ and $T \subseteq V$, the hitting probability is:
+\begin{equation}
+h(v_i, T) = \mathbb{P}(\exists t : X_t \in T \mid X_0 = v_i) = 1
+\end{equation}
+
+For the first path ($|T|=1$), the expected hitting time is:
+\begin{equation}
+\mathbb{E}[H_{v_i,T}] = \frac{|E|}{|V|} \cdot R_{\text{eff}}(v_i, T)
+\end{equation}
+where $R_{\text{eff}}$ is the effective resistance.
+
+\subsection{First Path Analysis}
+
+\begin{theorem}
+For a grid graph with $n = w \times h$ vertices, the expected number of steps for the first path is:
+\begin{equation}
+\mathbb{E}[\text{first path steps}] = \Theta(n\log n)
+\end{equation}
+\end{theorem}
+
+\begin{proof}[Sketch]
+For a single target vertex $v_0$ in a 2D grid:
+\begin{align}
+R_{\text{eff}}(v_i, v_0) &\approx \frac{1}{\pi}\ln d(v_i, v_0) + O(1)\\
+\mathbb{E}[H_{v_i,v_0}] &\approx \frac{2|E|}{|V|\pi}\ln d(v_i, v_0)
+\end{align}
+
+Integrating over all possible distances in a grid:
+\begin{equation}
+\mathbb{E}[\text{steps}] \approx \frac{2|E|}{|V|\pi} \int_{1}^{\sqrt{n}} \ln r \cdot 2\pi r \, dr = \Theta(n\log n)
+\end{equation}
+\end{proof}
+
+\subsection{Loop Erasure Effect}
+
+For a random walk of length $L$, the expected length after loop erasure is:
+\begin{equation}
+\mathbb{E}[\text{LERW length}] \approx \sqrt{L}
+\end{equation}
+
+Therefore, for the first path with $L = \Theta(n\log n)$:
+\begin{equation}
+\mathbb{E}[\text{first path LERW length}] = \Theta(\sqrt{n\log n})
+\end{equation}
+
+\subsection{Convergence Rates}
+
+As the algorithm progresses, $|T|$ increases, and hitting probabilities change. For $|T| = k$:
+\begin{equation}
+\mathbb{P}(\text{hit }T\text{ within }m\text{ steps}) = 1 - \left(1 - \frac{k}{n}\right)^m
+\end{equation}
+
+This yields expected path lengths:
+\begin{align}
+\mathbb{E}[\text{first path}] &= \Theta(n\log n)\\
+\mathbb{E}[\text{middle paths}] &= \Theta(n^{1/2}\log n)\\
+\mathbb{E}[\text{last paths}] &= \Theta(\log n)
+\end{align}
+
+\begin{corollary}
+The total expected runtime of Wilson's algorithm on a grid graph is dominated by the first few paths, giving $\Theta(n\log n)$ overall complexity.
+\end{corollary}
+
+\section{Conclusion}
+
+Wilson's algorithm provides a uniformly distributed spanning tree through loop-erased random walks. The first path dominates the runtime with $\Theta(n\log n)$ complexity, while subsequent paths exhibit progressively faster convergence. This mathematical structure explains both the algorithm's correctness and its observed performance characteristics in maze generation applications.
+
+\appendix
+\section{Implementation}
+
+The full OCaml implementation of Wilson's algorithm described in this paper is available in our GitHub repository:
+
+\begin{center}
+\url{https://github.com/username/maze-generation}
+\end{center}
+
+The repository contains:
+\begin{itemize}
+    \item \texttt{wilson.ml} - Implementation of Wilson's algorithm
+    \item \texttt{maze.ml} - Core maze data structures
+    \item \texttt{animate.ml} - Visualization components for the algorithm
+    \item Benchmark tools and test suites
+\end{itemize}
+
+\end{document}

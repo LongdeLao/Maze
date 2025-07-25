@@ -1,7 +1,33 @@
 lib: [
   "_build/install/default/lib/Maze/META"
+  "_build/install/default/lib/Maze/algorithms/backtracking.ml" {"algorithms/backtracking.ml"}
+  "_build/install/default/lib/Maze/algorithms/eller.ml" {"algorithms/eller.ml"}
+  "_build/install/default/lib/Maze/algorithms/wilson.ml" {"algorithms/wilson.ml"}
+  "_build/install/default/lib/Maze/animate.cmi"
+  "_build/install/default/lib/Maze/animate.cmt"
+  "_build/install/default/lib/Maze/animate.cmx"
+  "_build/install/default/lib/Maze/backtracking.cmi"
+  "_build/install/default/lib/Maze/backtracking.cmt"
+  "_build/install/default/lib/Maze/backtracking.cmx"
   "_build/install/default/lib/Maze/dune-package"
+  "_build/install/default/lib/Maze/eller.cmi"
+  "_build/install/default/lib/Maze/eller.cmt"
+  "_build/install/default/lib/Maze/eller.cmx"
+  "_build/install/default/lib/Maze/graphics/animate.ml" {"graphics/animate.ml"}
+  "_build/install/default/lib/Maze/maze.a"
+  "_build/install/default/lib/Maze/maze.cma"
+  "_build/install/default/lib/Maze/maze.cmi"
+  "_build/install/default/lib/Maze/maze.cmt"
+  "_build/install/default/lib/Maze/maze.cmx"
+  "_build/install/default/lib/Maze/maze.cmxa"
+  "_build/install/default/lib/Maze/maze.ml"
   "_build/install/default/lib/Maze/opam"
+  "_build/install/default/lib/Maze/wilson.cmi"
+  "_build/install/default/lib/Maze/wilson.cmt"
+  "_build/install/default/lib/Maze/wilson.cmx"
+]
+libexec: [
+  "_build/install/default/lib/Maze/maze.cmxs"
 ]
 bin: [
   "_build/install/default/bin/Maze"
