@@ -8,9 +8,12 @@ open Tsdl_ttf
 
 let rec take n lst = if n <= 0 then [] else match lst with | [] -> [] | h::t -> h :: take (n-1) t
 
-let win_width = 800
+let win_width = 800 + 220
 let win_height = 850
 let menu_height = 50
+let panel_width = 220
+let grid_area_width = 800
+let bottom_margin = 20
 
 let draw_rect r g b a renderer rect =
   Sdl.set_render_draw_color renderer r g b a |> ignore;
@@ -47,10 +50,9 @@ let run size base_delay algorithm =
       begin match Sdl.create_renderer win ~index:(-1) ~flags:Sdl.Renderer.accelerated with
       | Error _ -> ()
       | Ok ren ->
-        let cell_px = win_width / size in
-        let grid_size = size * cell_px in
-        let offset_x = (win_width - grid_size) / 2 in
-        let offset_y = menu_height + (win_height - menu_height - grid_size) / 2 in
+        let cell_px = grid_area_width / size in
+        let offset_x = (grid_area_width - size * cell_px) / 2 in
+        let offset_y = menu_height + (win_height - menu_height - grid_area_width) / 2 in  (* centers with bottom margin *)
         let maze = Maze.create_maze size size in
         let trail = ref [] in
         let add_trail x y = trail := (x,y) :: !trail; if List.length !trail > 60 then trail := take 60 !trail in
@@ -76,10 +78,65 @@ let run size base_delay algorithm =
                   Sdl.destroy_texture texture;
               Sdl.free_surface surface;
           Sdl.set_render_draw_color ren 0 0 0 255 |> ignore;
-          draw_line ren offset_x offset_y (offset_x + grid_size) offset_y;
-          draw_line ren (offset_x + grid_size) offset_y (offset_x + grid_size) (offset_y + grid_size);
-          draw_line ren (offset_x + grid_size) (offset_y + grid_size) offset_x (offset_y + grid_size);
-          draw_line ren offset_x (offset_y + grid_size) offset_x offset_y;
+          draw_line ren offset_x offset_y (offset_x + grid_area_width) offset_y;
+          draw_line ren (offset_x + grid_area_width) offset_y (offset_x + grid_area_width) (offset_y + grid_area_width);
+          draw_line ren (offset_x + grid_area_width) (offset_y + grid_area_width) offset_x (offset_y + grid_area_width);
+          draw_line ren offset_x (offset_y + grid_area_width) offset_x offset_y;
+          (* side panel background *)
+          Sdl.set_render_draw_color ren 245 245 245 255 |> ignore;
+          Sdl.render_fill_rect ren (Some (Sdl.Rect.create ~x:grid_area_width ~y:0 ~w:panel_width ~h:win_height)) |> ignore;
+          (* display algorithm name *)
+          let label_color = Sdl.Color.create ~r:0 ~g:0 ~b:0 ~a:255 in
+          let render_text txt y =
+            match Ttf.render_text_solid font txt label_color with
+            | Error _ -> ()
+            | Ok surf ->
+                match Sdl.create_texture_from_surface ren surf with
+                | Error _ -> ()
+                | Ok tex ->
+                    let _, _, (tw,th) = match Sdl.query_texture tex with | Ok t -> t | Error _ -> (Sdl.Pixel.format_unknown, Sdl.Texture.access_static, (0,0)) in
+                    let dst = Sdl.Rect.create ~x:(grid_area_width + (panel_width - tw)/2) ~y:y ~w:tw ~h:th in
+                    ignore (Sdl.render_copy ren tex ~dst:dst);
+                    Sdl.destroy_texture tex;
+                Sdl.free_surface surf
+          in
+          render_text ("Algo: " ^ algorithm) 60;
+          (* algorithm specific details *)
+          begin
+            match algorithm with
+            | "backtracking" | "dfs" ->
+                render_text (Printf.sprintf "Stack depth: %d" (List.length !Backtracking.path_stack)) 120;
+                render_text (if !Backtracking.is_backtracking then "State: backtracking" else "State: forward") 150
+            | "wilson" ->
+                render_text (Printf.sprintf "Path len: %d" (List.length !Wilson.current_path)) 120;
+                render_text (if !Wilson.is_path_building then "Building path" else "Carving") 150
+            | "eller" ->
+                let max_row = ref (-1) in
+                for y=0 to size-1 do
+                  for x=0 to size-1 do
+                    if maze.Maze.cells.(x).(y).Maze.visited then max_row := max !max_row y
+                  done
+                done;
+                render_text (Printf.sprintf "Row: %d/%d" (!max_row + 1) size) 120
+            | _ -> ()
+          end;
+          (* visited count *)
+          let visited_cnt = ref 0 in
+          Array.iter (Array.iter (fun c -> if c.Maze.visited then incr visited_cnt)) maze.Maze.cells;
+          render_text (Printf.sprintf "Visited: %d" !visited_cnt) 180;
+          (* mini grid *)
+          let mini_cell = max 2 (min ((panel_width - 40)/size) ((win_height - 200)/size)) in
+          let mini_off_x = grid_area_width + (panel_width - mini_cell*size)/2 in
+          let mini_off_y = 150 in
+          for x=0 to size-1 do
+            for y=0 to size-1 do
+              let c = maze.Maze.cells.(x).(y) in
+              let col = if c.Maze.visited then (0,200,0,255) else (220,220,220,255) in
+              let r,g,b,a = col in
+              Sdl.set_render_draw_color ren r g b a |> ignore;
+              Sdl.render_fill_rect ren (Some (Sdl.Rect.create ~x:(mini_off_x + x*mini_cell) ~y:(mini_off_y + y*mini_cell) ~w:mini_cell ~h:mini_cell)) |> ignore;
+            done
+          done;
           for x=0 to size-1 do
             for y=0 to size-1 do
               let c = maze.Maze.cells.(x).(y) in

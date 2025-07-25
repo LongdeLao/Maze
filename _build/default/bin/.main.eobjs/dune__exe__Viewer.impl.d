@@ -1,1 +1,1 @@
-bin/viewer.ml: Animate Array Backtracking Eller Int32 List Maze Option Sdl Tsdl Tsdl_ttf Ttf Wilson
+bin/viewer.ml: Animate Array Backtracking Eller Int32 List Maze Option Printf Sdl Tsdl Tsdl_ttf Ttf Wilson
