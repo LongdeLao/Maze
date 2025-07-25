@@ -6,7 +6,7 @@ open Eller
 open Animate
 open Tsdl_ttf
 
-let rec take n lst = if n<=0 then [] else match lst with []->[] | x::tl -> x :: take (n-1) tl
+let rec take n lst = if n <= 0 then [] else match lst with | [] -> [] | h::t -> h :: take (n-1) t
 
 let win_width = 800
 let win_height = 850
@@ -28,12 +28,19 @@ let circle renderer cx cy radius (r,g,b,a) =
     done
   done
 
+let thick_line renderer x1 y1 x2 y2 r g b a thickness =
+  Sdl.set_render_draw_color renderer r g b a |> ignore;
+  for i = -(thickness / 2) to thickness / 2 do
+    if x1 = x2 then ignore (Sdl.render_draw_line renderer (x1 + i) y1 (x2 + i) y2) (* vertical *)
+    else ignore (Sdl.render_draw_line renderer x1 (y1 + i) x2 (y2 + i)) (* horizontal *)
+  done
+
 let run size base_delay algorithm =
   match Sdl.init Sdl.Init.video with
   | Error _ -> ()
   | Ok () ->
     ignore (Ttf.init ());
-    let font = match Ttf.open_font "/Users/longde/Desktop/Maze/fonts/arial.ttf" 24 with | Ok f -> f | Error (`Msg e) -> Sdl.log "Font error: %s" e; exit 1 in
+    let font = match Ttf.open_font "fonts/arial.ttf" 24 with | Ok f -> f | Error (`Msg e) -> Sdl.log "Font error: %s" e; exit 1 in
     begin match Sdl.create_window ~w:win_width ~h:win_height "Maze" Sdl.Window.shown with
     | Error _ -> ()
     | Ok win ->
@@ -155,7 +162,7 @@ let run size base_delay algorithm =
                     let px2 = offset_x + x2 * cell_px + cell_px / 2 in
                     let py2 = offset_y + y2 * cell_px + cell_px / 2 in
                     Sdl.set_render_draw_color ren 255 215 0 255 |> ignore;
-                    draw_line ren px1 py1 px2 py2;
+                    thick_line ren px1 py1 px2 py2 255 215 0 255 3;
                     draw_solved_lines ((x2,y2)::tl)
               in
               draw_solved_lines path
@@ -186,7 +193,19 @@ let run size base_delay algorithm =
               let mx = Sdl.Event.get ev Sdl.Event.mouse_button_x in
               let my = Sdl.Event.get ev Sdl.Event.mouse_button_y in
               if Sdl.point_in_rect (Sdl.Point.create ~x:mx ~y:my) button_rect then begin
-                solved_path := Some (Maze.solve_maze maze);
+                solved_path := Some (Maze.solve_maze maze ());
+                trail := [];
+                let path = Option.get !solved_path in
+                let rec animate_path remaining =
+                  match remaining with
+                  | [] -> ()
+                  | _::tl ->
+                      solved_path := Some (take (List.length path - List.length remaining) path);
+                      draw ();
+                      Sdl.delay 50l;
+                      animate_path tl
+                in
+                animate_path (List.rev path);
                 draw ()
               end
             end

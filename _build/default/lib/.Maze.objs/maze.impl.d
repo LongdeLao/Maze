@@ -1,1 +1,1 @@
-lib/maze.pp.ml: Array Hashtbl List Queue
+lib/maze.pp.ml: Array Hashtbl List Option

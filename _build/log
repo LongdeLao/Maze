@@ -1,4 +1,4 @@
-# dune exec bin/main.exe -- 4 1 d
+# dune exec -- bin/main.exe 35 1 e
 # OCAMLPARAM: unset
 # Shared cache: enabled-except-user-rules
 # Shared cache location: /Users/longde/.cache/dune/db
@@ -13,4 +13,4 @@
 #  ; build_dir = In_build_dir "default"
 #  ; instrument_with = []
 #  }
-$ /Users/longde/.opam/default/bin/ocamlc.opt -config > /var/folders/5d/brpn3kqd6td5gmf3drh_v_rm0000gp/T/dune_96feb8_output
+$ /Users/longde/.opam/default/bin/ocamlc.opt -config > /var/folders/5d/brpn3kqd6td5gmf3drh_v_rm0000gp/T/dune_c25cac_output
