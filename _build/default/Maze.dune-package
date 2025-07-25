@@ -26,6 +26,10 @@
    maze.cmxa
    maze.ml
    opam
+   util.cmi
+   util.cmt
+   util.cmx
+   util.ml
    wilson.cmi
    wilson.cmt
    wilson.cmx))
@@ -58,6 +62,10 @@
     (obj_name maze)
     (visibility public)
     (source (path Maze) (impl (path maze.ml))))
+   (module
+    (obj_name util)
+    (visibility public)
+    (source (path Util) (impl (path util.ml))))
    (module
     (obj_name wilson)
     (visibility public)

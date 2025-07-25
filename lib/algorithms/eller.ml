@@ -207,6 +207,10 @@ let generate maze ?render_callback () =
         Hashtbl.iter (fun set_id _ ->
           debug (Printf.sprintf "Processing set %d in row %d" set_id y);
           let cells = get_cells_in_set_for_row cell_sets set_id y maze.width in
+          (* shuffle order to avoid always picking leftmost first *)
+          let cells_arr = Array.of_list cells in
+          ignore (Util.shuffle cells_arr);
+          let cells = Array.to_list cells_arr in
           debug (Printf.sprintf "Set %d has %d cells in row %d" set_id (List.length cells) y);
           (* Ensure at least one vertical connection per set *)
           let must_connect = ref true in

@@ -42,8 +42,27 @@ let get_cell maze x y =
   else
     None
 
+(* in_bounds and knock_down_wall moved to Util *)
+
+(* -------------------------------------------------------------------------- *)
+(* Shared directions                                                           *)
+(*                                                                            *)
+(* We define a first-class direction type for clarity/documentation, together *)
+(* with a helper to convert each constructor into a (dx,dy) offset.           *)
+(* -------------------------------------------------------------------------- *)
+
+type direction = North | East | South | West
+
+let offset = function
+  | North -> (0, -1)
+  | East  -> (1, 0)
+  | South -> (0, 1)
+  | West  -> (-1, 0)
+
+let all_directions : direction array = [| North; East; South; West |]
+
 let solve_maze maze ?render_callback () =
-  let directions = [ (0, -1); (1, 0); (0, 1); (-1, 0) ] in
+  let dir_offsets = Array.to_list (Array.map offset all_directions) in
   let start = (maze.start_x, maze.start_y) in
   let goal = (maze.end_x, maze.end_y) in
   let came_from = Hashtbl.create (maze.width * maze.height) in
@@ -82,7 +101,7 @@ let solve_maze maze ?render_callback () =
                 )
               )
           | None -> ()
-      ) directions;
+      ) dir_offsets;
     Option.iter (fun cb -> cb ()) render_callback
   done;
   if not !found then []

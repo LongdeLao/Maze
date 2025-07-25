@@ -5,6 +5,7 @@ open Wilson
 open Eller
 open Animate
 open Tsdl_ttf
+open Unix
 
 let rec take n lst = if n <= 0 then [] else match lst with | [] -> [] | h::t -> h :: take (n-1) t
 
@@ -38,7 +39,25 @@ let thick_line renderer x1 y1 x2 y2 r g b a thickness =
     else ignore (Sdl.render_draw_line renderer x1 (y1 + i) x2 (y2 + i)) (* horizontal *)
   done
 
+let paused = ref false
+let base_delay_ref = ref 30 (* milliseconds *)
+let show_pseudo = ref false
+let start_time = ref 0.0
+
+let process_event ev =
+  let typ = Sdl.Event.get ev Sdl.Event.typ in
+  if typ = Sdl.Event.quit then exit 0
+  else if typ = Sdl.Event.key_down then begin
+    let kc = Sdl.Event.get ev Sdl.Event.keyboard_keycode in
+    if kc = Sdl.K.space then paused := not !paused
+    else if kc = Sdl.K.equals then if !base_delay_ref > 5 then base_delay_ref := !base_delay_ref - 5
+    else if kc = Sdl.K.underscore then base_delay_ref := !base_delay_ref + 5
+    (* P key no longer toggles pseudo panel *)
+  end
+
 let run size base_delay algorithm =
+  start_time := Unix.gettimeofday ();
+  base_delay_ref := base_delay;
   match Sdl.init Sdl.Init.video with
   | Error _ -> ()
   | Ok () ->
@@ -83,8 +102,11 @@ let run size base_delay algorithm =
           draw_line ren (offset_x + grid_area_width) (offset_y + grid_area_width) offset_x (offset_y + grid_area_width);
           draw_line ren offset_x (offset_y + grid_area_width) offset_x offset_y;
           (* side panel background *)
-          Sdl.set_render_draw_color ren 245 245 245 255 |> ignore;
+          Sdl.set_render_draw_color ren 225 225 225 255 |> ignore;
           Sdl.render_fill_rect ren (Some (Sdl.Rect.create ~x:grid_area_width ~y:0 ~w:panel_width ~h:win_height)) |> ignore;
+          (* separator line *)
+          Sdl.set_render_draw_color ren 100 100 100 255 |> ignore;
+          draw_line ren grid_area_width 0 grid_area_width win_height;
           (* display algorithm name *)
           let label_color = Sdl.Color.create ~r:0 ~g:0 ~b:0 ~a:255 in
           let render_text txt y =
@@ -102,41 +124,48 @@ let run size base_delay algorithm =
           in
           render_text ("Algo: " ^ algorithm) 60;
           (* algorithm specific details *)
-          begin
-            match algorithm with
-            | "backtracking" | "dfs" ->
-                render_text (Printf.sprintf "Stack depth: %d" (List.length !Backtracking.path_stack)) 120;
-                render_text (if !Backtracking.is_backtracking then "State: backtracking" else "State: forward") 150
-            | "wilson" ->
-                render_text (Printf.sprintf "Path len: %d" (List.length !Wilson.current_path)) 120;
-                render_text (if !Wilson.is_path_building then "Building path" else "Carving") 150
-            | "eller" ->
-                let max_row = ref (-1) in
-                for y=0 to size-1 do
-                  for x=0 to size-1 do
-                    if maze.Maze.cells.(x).(y).Maze.visited then max_row := max !max_row y
-                  done
-                done;
-                render_text (Printf.sprintf "Row: %d/%d" (!max_row + 1) size) 120
-            | _ -> ()
-          end;
-          (* visited count *)
           let visited_cnt = ref 0 in
           Array.iter (Array.iter (fun c -> if c.Maze.visited then incr visited_cnt)) maze.Maze.cells;
-          render_text (Printf.sprintf "Visited: %d" !visited_cnt) 180;
-          (* mini grid *)
-          let mini_cell = max 2 (min ((panel_width - 40)/size) ((win_height - 200)/size)) in
-          let mini_off_x = grid_area_width + (panel_width - mini_cell*size)/2 in
-          let mini_off_y = 150 in
-          for x=0 to size-1 do
-            for y=0 to size-1 do
-              let c = maze.Maze.cells.(x).(y) in
-              let col = if c.Maze.visited then (0,200,0,255) else (220,220,220,255) in
-              let r,g,b,a = col in
-              Sdl.set_render_draw_color ren r g b a |> ignore;
-              Sdl.render_fill_rect ren (Some (Sdl.Rect.create ~x:(mini_off_x + x*mini_cell) ~y:(mini_off_y + y*mini_cell) ~w:mini_cell ~h:mini_cell)) |> ignore;
-            done
-          done;
+          let panel_text_y = 120 in
+          render_text (Printf.sprintf "Visited: %d" !visited_cnt) panel_text_y;
+          begin match algorithm with
+          | "backtracking" | "dfs" ->
+              render_text (Printf.sprintf "Stack depth: %d" (List.length !Backtracking.path_stack)) (panel_text_y + 20);
+              render_text (if !Backtracking.is_backtracking then "State: backtracking" else "State: forward") (panel_text_y + 40)
+          | "wilson" ->
+              render_text (Printf.sprintf "Path len: %d" (List.length !Wilson.current_path)) (panel_text_y + 20);
+              render_text (if !Wilson.is_path_building then "Building path" else "Carving") (panel_text_y + 40)
+          | "eller" ->
+              let max_row = ref (-1) in
+              for y=0 to size-1 do for x=0 to size-1 do if maze.Maze.cells.(x).(y).Maze.visited then max_row := max !max_row y done done;
+              render_text (Printf.sprintf "Row: %d/%d" (!max_row + 1) size) (panel_text_y + 20)
+          | _ -> () end;
+          (* mini grid is currently disabled to avoid overlapping with text
+            let is_in_wilson_path x y =
+              algorithm = "wilson" && !is_path_building &&
+              List.exists (fun (px,py) -> px = x && py = y) !current_path
+            in
+            let wilson_head =
+              if algorithm = "wilson" && !is_path_building && !current_path <> [] then
+                Some (List.hd !current_path)
+              else None
+            in
+            for x=0 to size-1 do
+              for y=0 to size-1 do
+                let c = maze.Maze.cells.(x).(y) in
+                let col =
+                  match wilson_head with
+                  | Some (hx,hy) when hx = x && hy = y -> (0,180,255,255) (* Wilson path head *)
+                  | _ when is_in_wilson_path x y -> (100,150,255,200)   (* Wilson current path *)
+                  | _ when c.Maze.visited -> (0,200,0,255)             (* Visited / carved *)
+                  | _ -> (220,220,220,255)                              (* Unvisited *)
+                in
+                let r,g,b,a = col in
+                Sdl.set_render_draw_color ren r g b a |> ignore;
+                Sdl.render_fill_rect ren (Some (Sdl.Rect.create ~x:(mini_off_x + x*mini_cell) ~y:(mini_off_y + y*mini_cell) ~w:mini_cell ~h:mini_cell)) |> ignore;
+              done
+            done;
+          *)
           for x=0 to size-1 do
             for y=0 to size-1 do
               let c = maze.Maze.cells.(x).(y) in
@@ -232,8 +261,13 @@ let run size base_delay algorithm =
           add_trail cx cy;
           draw ();
           let ev = Sdl.Event.create () in
-          while Sdl.poll_event (Some ev) do if Sdl.Event.get ev Sdl.Event.typ = Sdl.Event.quit then exit 0 done;
-          Sdl.delay (Int32.of_int base_delay)
+          while Sdl.poll_event (Some ev) do process_event ev done;
+          while !paused do
+            let pev = Sdl.Event.create () in
+            while Sdl.poll_event (Some pev) do process_event pev done;
+            draw ();
+            Sdl.delay 16l;
+          done;
         in
         (match algorithm with
         | "wilson" -> ignore (Wilson.generate maze ~render_callback:cb ())
@@ -243,10 +277,7 @@ let run size base_delay algorithm =
         draw ();
         let rec loop () =
           let ev = Sdl.Event.create () in
-          while Sdl.poll_event (Some ev) do
-            let typ = Sdl.Event.get ev Sdl.Event.typ in
-            if typ = Sdl.Event.quit then exit 0
-            else if typ = Sdl.Event.mouse_button_down then begin
+          while Sdl.poll_event (Some ev) do process_event ev; if Sdl.Event.get ev Sdl.Event.typ = Sdl.Event.mouse_button_down then begin
               let mx = Sdl.Event.get ev Sdl.Event.mouse_button_x in
               let my = Sdl.Event.get ev Sdl.Event.mouse_button_y in
               if Sdl.point_in_rect (Sdl.Point.create ~x:mx ~y:my) button_rect then begin

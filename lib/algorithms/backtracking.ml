@@ -1,30 +1,16 @@
 (* Generator: recursive backtracking maze generation with optional render callback *)
 
 open Animate
+open Util
 
-let directions = [| (0, -1); (1, 0); (0, 1); (-1, 0) |]
+(* Use shared direction offsets from Maze *)
+let directions = Maze.all_directions
 
 let path_stack = ref []
 let is_backtracking = ref false
 
-let remove_walls (x, y) (nx, ny) maze =
-  let cell = maze.Maze.cells.(x).(y) in
-  let neighbor = maze.Maze.cells.(nx).(ny) in
-  match (nx - x, ny - y) with
-  | (1, 0)  -> cell.Maze.right_wall <- false; neighbor.Maze.left_wall <- false
-  | (-1, 0) -> cell.Maze.left_wall <- false; neighbor.Maze.right_wall <- false
-  | (0, 1)  -> cell.Maze.bottom_wall <- false; neighbor.Maze.top_wall <- false
-  | (0, -1) -> cell.Maze.top_wall <- false; neighbor.Maze.bottom_wall <- false
-  | _ -> ()
-
-let shuffle arr =
-  let n = Array.length arr in
-  for i = n - 1 downto 1 do
-    let j = Random.int (i + 1) in
-    let tmp = arr.(i) in
-    arr.(i) <- arr.(j);
-    arr.(j) <- tmp;
-  done; arr
+(* removed local remove_walls; rely on Util.knock_down_wall *)
+(* shuffle provided by Util *)
 
 let animate_movement = Animate.animate_movement
 
@@ -33,14 +19,15 @@ let rec carve_path x y maze render_callback =
   Animate.current_x := float_of_int x; Animate.current_y := float_of_int y;
   maze.Maze.cells.(x).(y).Maze.visited <- true;
   Option.iter (fun cb -> cb ()) render_callback;
-  let dirs = shuffle [|0;1;2;3|] in
-  Array.iter (fun dir ->
-    let dx, dy = directions.(dir) in
+  let dirs = Util.shuffle [|0;1;2;3|] in
+  Array.iter (fun dir_idx ->
+    let dir = directions.(dir_idx) in
+    let dx, dy = Maze.offset dir in
     let nx, ny = x + dx, y + dy in
     match Maze.get_cell maze nx ny with
     | Some cell when not cell.Maze.visited ->
         is_backtracking := false;
-        remove_walls (x, y) (nx, ny) maze;
+        Util.knock_down_wall maze (x, y) (nx, ny);
         animate_movement x y nx ny render_callback 4;
         carve_path nx ny maze render_callback
     | _ -> ()

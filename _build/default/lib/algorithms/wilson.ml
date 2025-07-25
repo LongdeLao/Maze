@@ -41,8 +41,18 @@
 
 open Maze
 open Animate
+open Util
 
-let directions = [| (0, -1); (1, 0); (0, 1); (-1, 0) |]
+(* Whether to run Wilson in "temperature-biased" mode. In this mode we bias the random
+   walk in favour of neighbours that are already visited when the global “temperature”
+   is low.  Temperature starts low (few cells carved) and gradually rises towards 1
+   as more cells are visited, giving more uniform randomness later on. *)
+
+(* Bias strength: 1.0 = always favour visited neighbours, 0.0 = unbiased. *)
+let default_temperature visited total =
+  if total = 0 then 0.0 else max 0.0 (1.0 -. (float visited /. float total))
+
+let directions = Maze.all_directions
 
 
 let current_path : (int * int) list ref = ref []
@@ -50,45 +60,40 @@ let path_set : (int * int, unit) Hashtbl.t ref = ref (Hashtbl.create 64)
 let is_path_building = ref false
 
 
-let shuffle a =
-  let n = Array.length a in
-  for i = n - 1 downto 1 do
-    let j = Random.int (i + 1) in
-    let tmp = a.(i) in
-    a.(i) <- a.(j);
-    a.(j) <- tmp
-  done;
-  a
-
-
 let animate_movement = Animate.animate_movement
 
 
-let remove_walls (x, y) (nx, ny) maze =
-  let c = maze.cells.(x).(y)
-  and n = maze.cells.(nx).(ny) in
-  match (nx - x, ny - y) with
-  | 1, 0  -> c.right_wall <- false; n.left_wall   <- false
-  | -1, 0 -> c.left_wall  <- false; n.right_wall  <- false
-  | 0, 1  -> c.bottom_wall<- false; n.top_wall    <- false
-  | 0,-1  -> c.top_wall   <- false; n.bottom_wall <- false
-  | _ -> ()
+(* Use Util.knock_down_wall and Util.in_bounds *)
 
+let count_visited_neighbors maze nx ny =
+  Array.fold_left (fun acc dir ->
+    let dx,dy = Maze.offset dir in
+    let vx,vy = nx+dx, ny+dy in
+    if Util.in_bounds maze vx vy && maze.cells.(vx).(vy).visited then acc+1 else acc)
+    0 Maze.all_directions
 
-let in_bounds maze x y = x >= 0 && x < maze.width && y >= 0 && y < maze.height
-
-
-let random_neighbor maze x y =
-  let idxs = shuffle (Array.init 4 (fun i -> i)) in
-  let rec aux i =
-    if i = 4 then None
-    else
-      let dir = idxs.(i) in
-      let dx, dy = directions.(dir) in
-      let nx, ny = x + dx, y + dy in
-      if in_bounds maze nx ny then Some (nx, ny) else aux (i + 1)
+let random_neighbor ?(temperature=0.0) maze x y =
+  let neighbors_with_weights =
+    Array.fold_left (fun acc dir ->
+      let dx,dy = Maze.offset dir in
+      let nx,ny = x+dx, y+dy in
+      if Util.in_bounds maze nx ny then (
+        let visited_adj = count_visited_neighbors maze nx ny in
+        let weight = 1.0 +. temperature *. float_of_int visited_adj in
+        ((nx,ny), weight) :: acc)
+      else acc)
+      [] Maze.all_directions
   in
-  aux 0
+  match neighbors_with_weights with
+  | [] -> None
+  | list ->
+      let total = List.fold_left (fun s (_,w) -> s +. w) 0.0 list in
+      let r = Random.float total in
+      let rec pick acc = function
+        | [] -> None
+        | (p,w)::tl -> let acc' = acc +. w in if r <= acc' then Some p else pick acc' tl
+      in
+      pick 0.0 list
 
 let erase_loop path (lx, ly) =
   let rec aux acc = function
@@ -99,7 +104,7 @@ let erase_loop path (lx, ly) =
   in
   aux [] path
 
-let generate maze ?render_callback () =
+let generate ?(optimized=false) ?(temperature_func=default_temperature) maze ?render_callback () =
  
   Array.iter (Array.iter (fun c ->
     c.visited <- false;
@@ -113,6 +118,7 @@ let generate maze ?render_callback () =
     !c
   in
 
+  let total_cells = maze.width * maze.height in
   
   let sx = Random.int maze.width and sy = Random.int maze.height in
   maze.cells.(sx).(sy).visited <- true;
@@ -140,7 +146,8 @@ let generate maze ?render_callback () =
     let rec build () =
       let cx = int_of_float !Animate.current_x in
       let cy = int_of_float !Animate.current_y in
-      match random_neighbor maze cx cy with
+      let temp = if optimized then temperature_func (total_cells - unvisited_count ()) total_cells else 1.0 in
+      match random_neighbor ~temperature:temp maze cx cy with
       | None -> () (* should not happen *)
       | Some (nx, ny) ->
           animate_movement cx cy nx ny render_callback 2;
@@ -171,7 +178,7 @@ let generate maze ?render_callback () =
     let rec carve_pairs = function
       | [] | [_] -> ()
       | (x1, y1) :: (x2, y2) :: tl ->
-          remove_walls (x1, y1) (x2, y2) maze;
+          Util.knock_down_wall maze (x1, y1) (x2, y2);
           animate_movement x1 y1 x2 y2 render_callback 2;
           carve_pairs ((x2, y2) :: tl)
     in
