@@ -1,0 +1,1 @@
+external bench_now_ns : unit -> float = "bench_now_ns_ocaml" 

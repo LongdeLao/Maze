@@ -1,1 +1,1 @@
-bin/viewer.ml: Array Backtracking Int32 List Maze Sdl Tsdl Wilson
+bin/viewer.ml: Animate Array Backtracking Int32 List Maze Sdl Tsdl Wilson

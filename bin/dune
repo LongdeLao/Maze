@@ -4,3 +4,10 @@
  (modules main viewer)
  (libraries Maze tsdl tsdl-image)
  (flags (:standard -w -33-6)))
+
+(executable
+ (public_name Maze_bench)
+ (name benchmark)
+ (modules benchmark)
+ (libraries Maze)
+ (flags (:standard -w -33)))

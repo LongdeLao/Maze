@@ -1,1 +1,1 @@
-lib/wilson.ml: Array List Maze Option Random
+lib/wilson.ml: Animate Array Hashtbl List Maze Option Random

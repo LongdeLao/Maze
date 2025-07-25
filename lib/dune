@@ -1,5 +1,7 @@
 (library
  (name Maze)
- (modules maze backtracking wilson)
+ (modules maze animate backtracking wilson bench_timer)
+ (libraries)
+ (foreign_stubs (language c) (names bench_timer_stubs))
  (flags (:standard -w -27-32-33))
  (wrapped false))

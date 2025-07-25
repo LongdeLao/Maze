@@ -1,9 +1,9 @@
 (* Generator: recursive backtracking maze generation with optional render callback *)
 
+open Animate
+
 let directions = [| (0, -1); (1, 0); (0, 1); (-1, 0) |]
 
-let current_x = ref 0
-let current_y = ref 0
 let path_stack = ref []
 let is_backtracking = ref false
 
@@ -26,18 +26,11 @@ let shuffle arr =
     arr.(j) <- tmp;
   done; arr
 
-let animate_movement x0 y0 x1 y1 render steps =
-  let dx = float_of_int (x1 - x0) /. float_of_int steps in
-  let dy = float_of_int (y1 - y0) /. float_of_int steps in
-  for i = 1 to steps do
-    current_x := x0 + int_of_float (dx *. float_of_int i);
-    current_y := y0 + int_of_float (dy *. float_of_int i);
-    Option.iter (fun cb -> cb ()) render
-  done
+let animate_movement = Animate.animate_movement
 
 let rec carve_path x y maze render_callback =
   path_stack := (x, y) :: !path_stack;
-  current_x := x; current_y := y;
+  Animate.current_x := x; Animate.current_y := y;
   maze.Maze.cells.(x).(y).Maze.visited <- true;
   Option.iter (fun cb -> cb ()) render_callback;
   let dirs = shuffle [|0;1;2;3|] in

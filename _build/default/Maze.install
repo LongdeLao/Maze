@@ -5,6 +5,7 @@ lib: [
 ]
 bin: [
   "_build/install/default/bin/Maze"
+  "_build/install/default/bin/Maze_bench"
 ]
 doc: [
   "_build/install/default/doc/Maze/README.md"

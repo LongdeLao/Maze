@@ -1,1 +1,1 @@
-lib/backtracking.ml: Array List Maze Option Random
+lib/backtracking.ml: Animate Array List Maze Option Random

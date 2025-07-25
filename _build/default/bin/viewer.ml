@@ -1,6 +1,7 @@
 open Tsdl
 open Backtracking
 open Wilson
+open Animate
 
 let rec take n lst = if n<=0 then [] else match lst with []->[] | x::tl -> x :: take (n-1) tl
 
@@ -45,9 +46,9 @@ let run size base_delay algorithm =
         let px,py = x*cell_px,y*cell_px in
         let bg =
           if not c.Maze.visited then (240,240,240)
-          else if x = !Backtracking.current_x && y = !Backtracking.current_y then
+          else if algorithm = "backtracking" && x = !Animate.current_x && y = !Animate.current_y then
             if !Backtracking.is_backtracking then (255,100,100) else (0,220,0)
-          else if algorithm = "wilson" && x = !Wilson.current_x && y = !Wilson.current_y then
+          else if algorithm = "wilson" && x = !Animate.current_x && y = !Animate.current_y then
             if !Wilson.is_path_building then (100,100,255) else (0,220,0)
           else (255,255,255) in
         let r,g,b = bg in
@@ -119,11 +120,7 @@ let run size base_delay algorithm =
       | Error _ -> ()
       | Ok ren ->
         let cb () =
-          let current_x, current_y = 
-            if algorithm = "backtracking" then
-              (!Backtracking.current_x, !Backtracking.current_y)
-            else
-              (!Wilson.current_x, !Wilson.current_y)
+          let current_x, current_y = (!Animate.current_x, !Animate.current_y)
           in
           add_trail current_x current_y;
           draw ren;

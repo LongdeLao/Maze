@@ -1,20 +1,20 @@
-(*
-   Wilson's algorithm maze generator with visualization hooks.
-   Inspired by reference JavaScript implementation provided by the user.
-*)
+
 
 open Maze
+open Animate
 
 (* Four cardinal neighbour steps *)
 let directions = [| (0, -1); (1, 0); (0, 1); (-1, 0) |]
 
-(* Visualisation shared mutable state *)
-let current_x = ref 0
-let current_y = ref 0
+
+(* current position refs are now provided by Animate module *)
+(* Path is kept as a stack (head = current position) to allow O(1) push.  *)
 let current_path : (int * int) list ref = ref []
+(* Hash-set of cells currently on the path for O(1) membership test and loop erasure. *)
+let path_set : (int * int, unit) Hashtbl.t ref = ref (Hashtbl.create 64)
 let is_path_building = ref false
 
-(* Shuffle an integer array in-place and return it *)
+
 let shuffle a =
   let n = Array.length a in
   for i = n - 1 downto 1 do
@@ -25,17 +25,10 @@ let shuffle a =
   done;
   a
 
-(* Animate linear interpolation between two cells – identical to the helper used in backtracking.ml *)
-let animate_movement x0 y0 x1 y1 render steps =
-  let dx = float_of_int (x1 - x0) /. float_of_int steps in
-  let dy = float_of_int (y1 - y0) /. float_of_int steps in
-  for i = 1 to steps do
-    current_x := x0 + int_of_float (dx *. float_of_int i);
-    current_y := y0 + int_of_float (dy *. float_of_int i);
-    Option.iter (fun cb -> cb ()) render
-  done
 
-(* Remove the walls between two adjacent cells *)
+let animate_movement = Animate.animate_movement
+
+
 let remove_walls (x, y) (nx, ny) maze =
   let c = maze.cells.(x).(y)
   and n = maze.cells.(nx).(ny) in
@@ -46,10 +39,10 @@ let remove_walls (x, y) (nx, ny) maze =
   | 0,-1  -> c.top_wall   <- false; n.bottom_wall <- false
   | _ -> ()
 
-(* Convenience – check bounds *)
+
 let in_bounds maze x y = x >= 0 && x < maze.width && y >= 0 && y < maze.height
 
-(* Pick a random neighbour that stays in bounds *)
+
 let random_neighbor maze x y =
   let idxs = shuffle (Array.init 4 (fun i -> i)) in
   let rec aux i =
@@ -62,7 +55,6 @@ let random_neighbor maze x y =
   in
   aux 0
 
-(* Remove the loop in the path when we revisit a cell already in the path *)
 let erase_loop path (lx, ly) =
   let rec aux acc = function
     | [] -> List.rev acc (* should not happen *)
@@ -73,58 +65,75 @@ let erase_loop path (lx, ly) =
   aux [] path
 
 let generate maze ?render_callback () =
-  (* Reset maze – all walls up, all cells unvisited *)
+ 
   Array.iter (Array.iter (fun c ->
     c.visited <- false;
     c.top_wall <- true; c.right_wall <- true;
     c.bottom_wall <- true; c.left_wall <- true)) maze.cells;
 
-  (* Helper to count remaining unvisited cells *)
+ 
   let unvisited_count () =
     let c = ref 0 in
     Array.iter (Array.iter (fun cell -> if not cell.visited then incr c)) maze.cells;
     !c
   in
 
-  (* Choose an initial visited cell so algorithm terminates *)
+  
   let sx = Random.int maze.width and sy = Random.int maze.height in
   maze.cells.(sx).(sy).visited <- true;
-  current_x := sx; current_y := sy;
+  Animate.current_x := sx; Animate.current_y := sy;
   Option.iter (fun cb -> cb ()) render_callback;
 
-  (* Main loop – continue until every cell visited *)
+
   while unvisited_count () > 0 do
-    (* Pick a random unvisited starting cell *)
+   
     let rec pick () =
       let x = Random.int maze.width and y = Random.int maze.height in
       if maze.cells.(x).(y).visited then pick () else (x, y)
     in
     let start_x, start_y = pick () in
 
-    (* Initialise path *)
-    current_path := [(start_x, start_y)];
-    current_x := start_x; current_y := start_y;
+ 
+    current_path := [ (start_x, start_y) ];
+    path_set := Hashtbl.create 256;
+    Hashtbl.replace !path_set (start_x, start_y) ();
+    Animate.current_x := start_x; Animate.current_y := start_y;
     is_path_building := true;
     Option.iter (fun cb -> cb ()) render_callback;
 
-    (* Build loop-erased random walk until we reach a visited cell *)
+  
     let rec build () =
-      match random_neighbor maze !current_x !current_y with
+      match random_neighbor maze !Animate.current_x !Animate.current_y with
       | None -> () (* should not happen *)
       | Some (nx, ny) ->
-          animate_movement !current_x !current_y nx ny render_callback 2;
-          if List.exists (fun (px, py) -> px = nx && py = ny) !current_path then
-            (* Loop detected – erase tail after revisited cell *)
-            current_path := erase_loop !current_path (nx, ny)
-          else
-            current_path := !current_path @ [ (nx, ny) ];
-          current_x := nx; current_y := ny;
+          animate_movement !Animate.current_x !Animate.current_y nx ny render_callback 2;
+          (* Loop-erased random walk using hash set for O(1) membership. *)
+          if Hashtbl.mem !path_set (nx, ny) then (
+            (* Pop cells until (nx,ny) is at the top of the stack. *)
+            let rec trim () =
+              match !current_path with
+              | [] -> ()
+              | (x, y) :: tl ->
+                  if x = nx && y = ny then ()
+                  else (
+                    current_path := tl;
+                    Hashtbl.remove !path_set (x, y);
+                    trim () )
+            in
+            trim ()
+          ) else (
+            (* Push neighbour onto the path stack. *)
+            current_path := (nx, ny) :: !current_path;
+            Hashtbl.replace !path_set (nx, ny) ()
+          );
+          Animate.current_x := nx; Animate.current_y := ny;
           Option.iter (fun cb -> cb ()) render_callback;
           if maze.cells.(nx).(ny).visited then () else build ()
     in
     build ();
 
-    (* Carve the path into the maze and mark cells visited *)
+  
+    let path_forward = List.rev !current_path in
     let rec carve_pairs = function
       | [] | [_] -> ()
       | (x1, y1) :: (x2, y2) :: tl ->
@@ -132,13 +141,13 @@ let generate maze ?render_callback () =
           animate_movement x1 y1 x2 y2 render_callback 2;
           carve_pairs ((x2, y2) :: tl)
     in
-    carve_pairs !current_path;
-    List.iter (fun (x, y) -> maze.cells.(x).(y).visited <- true) !current_path;
+    carve_pairs path_forward;
+    List.iter (fun (x, y) -> maze.cells.(x).(y).visited <- true) path_forward;
     is_path_building := false;
     Option.iter (fun cb -> cb ()) render_callback;
   done;
 
-  (* Reset visited flags for potential path-finding visualisations *)
+ 
   Array.iter (Array.iter (fun c -> c.visited <- false)) maze.cells;
   maze.start_x <- 0; maze.start_y <- 0;
   maze.end_x <- maze.width - 1; maze.end_y <- maze.height - 1;

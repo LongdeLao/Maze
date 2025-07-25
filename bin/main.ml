@@ -20,6 +20,7 @@ let () =
   let algorithm = 
     match algorithm with
     | "wilson" | "w" -> "wilson"
+    | "dfs" | "d" | "backtracking" | "b" -> "backtracking"
     | _ -> "backtracking"  (* Default to backtracking *)
   in
   
