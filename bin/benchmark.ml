@@ -12,6 +12,7 @@ let time f =
 
 let generate maze algo =
   match String.lowercase_ascii algo with
+  | "wilson-temp" -> Wilson.generate ~biased:true maze ()
   | "wilson" | "w" -> Wilson.generate maze ()
   | "eller" | "e" -> Eller.generate maze ()
   | "dfs" | "backtracking" | "b" -> Backtracking.generate maze ()

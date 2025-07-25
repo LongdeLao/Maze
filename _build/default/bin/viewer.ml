@@ -227,7 +227,7 @@ let run size base_delay algorithm =
               else 
                 (100,180,255,alpha) 
             in
-            if algorithm != "wilson" || not !is_path_building then
+            if algorithm <> "wilson" || not !is_path_building then
               circle ren (offset_x + x*cell_px + cell_px/2) (offset_y + y*cell_px + cell_px/2) (cell_px/6) col
           ) !trail;
           let curr_px = offset_x + int_of_float (!Animate.current_x *. float_of_int cell_px) + cell_px / 2 in
@@ -270,6 +270,7 @@ let run size base_delay algorithm =
           done;
         in
         (match algorithm with
+        | "wilson-temp" -> ignore (Wilson.generate ~biased:true maze ~render_callback:cb ())
         | "wilson" -> ignore (Wilson.generate maze ~render_callback:cb ())
         | "eller" -> ignore (Eller.generate maze ~render_callback:cb ())
         | _ -> ignore (Backtracking.generate maze ~render_callback:cb ()) );

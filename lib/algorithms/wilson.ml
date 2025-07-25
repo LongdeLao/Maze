@@ -43,152 +43,133 @@ open Maze
 open Animate
 open Util
 
-(* Whether to run Wilson in "temperature-biased" mode. In this mode we bias the random
-   walk in favour of neighbours that are already visited when the global “temperature”
-   is low.  Temperature starts low (few cells carved) and gradually rises towards 1
-   as more cells are visited, giving more uniform randomness later on. *)
+(* Coordinates of the root (first visited) cell, used for biased walks *)
+let root_x = ref 0
+let root_y = ref 0
 
-(* Bias strength: 1.0 = always favour visited neighbours, 0.0 = unbiased. *)
-let default_temperature visited total =
-  if total = 0 then 0.0 else max 0.0 (1.0 -. (float visited /. float total))
-
-let directions = Maze.all_directions
-
-
+(* State for Wilson's algorithm *)
 let current_path : (int * int) list ref = ref []
 let path_set : (int * int, unit) Hashtbl.t ref = ref (Hashtbl.create 64)
 let is_path_building = ref false
 
+let manhattan a b c d = abs (a - c) + abs (b - d)
 
-let animate_movement = Animate.animate_movement
-
-
-(* Use Util.knock_down_wall and Util.in_bounds *)
-
-let count_visited_neighbors maze nx ny =
-  Array.fold_left (fun acc dir ->
-    let dx,dy = Maze.offset dir in
-    let vx,vy = nx+dx, ny+dy in
-    if Util.in_bounds maze vx vy && maze.cells.(vx).(vy).visited then acc+1 else acc)
-    0 Maze.all_directions
-
-let random_neighbor ?(temperature=0.0) maze x y =
+(* Biased random neighbor selection *)
+let random_neighbor_biased ?(temperature=0.0) maze x y =
   let neighbors_with_weights =
     Array.fold_left (fun acc dir ->
       let dx,dy = Maze.offset dir in
       let nx,ny = x+dx, y+dy in
-      if Util.in_bounds maze nx ny then (
-        let visited_adj = count_visited_neighbors maze nx ny in
-        let weight = 1.0 +. temperature *. float_of_int visited_adj in
-        ((nx,ny), weight) :: acc)
+      if Util.in_bounds maze nx ny then
+        let dist_current = manhattan x y !root_x !root_y in
+        let dist_next = manhattan nx ny !root_x !root_y in
+        let bias = if dist_next < dist_current then temperature else 0.0 in
+        let weight = 1.0 +. bias in
+        ((nx,ny), weight) :: acc
       else acc)
       [] Maze.all_directions
   in
   match neighbors_with_weights with
   | [] -> None
   | list ->
-      let total = List.fold_left (fun s (_,w) -> s +. w) 0.0 list in
-      let r = Random.float total in
+      let total_weight = List.fold_left (fun s (_, w) -> s +. w) 0.0 list in
+      let r = Random.float total_weight in
       let rec pick acc = function
         | [] -> None
-        | (p,w)::tl -> let acc' = acc +. w in if r <= acc' then Some p else pick acc' tl
+        | (p,w)::tl -> if r <= acc +. w then Some p else pick (acc +. w) tl
       in
       pick 0.0 list
 
-let erase_loop path (lx, ly) =
-  let rec aux acc = function
-    | [] -> List.rev acc (* should not happen *)
-    | (px, py) as h :: t ->
-        if px = lx && py = ly then List.rev (h :: acc)
-        else aux (h :: acc) t
+(* Standard unbiased random neighbor selection *)
+let random_neighbor maze x y =
+  let shuffled_dirs = Util.shuffle Maze.all_directions in
+  let rec find i =
+    if i >= Array.length shuffled_dirs then None
+    else
+      let dir = shuffled_dirs.(i) in
+      let dx, dy = Maze.offset dir in
+      let nx, ny = x + dx, y + dy in
+      if Util.in_bounds maze nx ny then Some (nx, ny) else find (i + 1)
   in
-  aux [] path
+  find 0
 
-let generate ?(optimized=false) ?(temperature_func=default_temperature) maze ?render_callback () =
- 
+(* Generate the maze *)
+let generate ?(biased=false) maze ?render_callback () =
   Array.iter (Array.iter (fun c ->
     c.visited <- false;
     c.top_wall <- true; c.right_wall <- true;
     c.bottom_wall <- true; c.left_wall <- true)) maze.cells;
 
- 
+  let sx = Random.int maze.width and sy = Random.int maze.height in
+  if biased then (root_x := sx; root_y := sy);
+  maze.cells.(sx).(sy).visited <- true;
+  Animate.current_x := float_of_int sx; Animate.current_y := float_of_int sy;
+  Option.iter (fun cb -> cb ()) render_callback;
+
   let unvisited_count () =
     let c = ref 0 in
     Array.iter (Array.iter (fun cell -> if not cell.visited then incr c)) maze.cells;
     !c
   in
 
-  let total_cells = maze.width * maze.height in
-  
-  let sx = Random.int maze.width and sy = Random.int maze.height in
-  maze.cells.(sx).(sy).visited <- true;
-  Animate.current_x := float_of_int sx; Animate.current_y := float_of_int sy;
-  Option.iter (fun cb -> cb ()) render_callback;
-
-
   while unvisited_count () > 0 do
-   
-    let rec pick () =
+    let rec pick_start () =
       let x = Random.int maze.width and y = Random.int maze.height in
-      if maze.cells.(x).(y).visited then pick () else (x, y)
+      if maze.cells.(x).(y).visited then pick_start () else (x, y)
     in
-    let start_x, start_y = pick () in
+    let start_x, start_y = pick_start () in
 
- 
-    current_path := [ (start_x, start_y) ];
+    current_path := [(start_x, start_y)];
     path_set := Hashtbl.create 256;
     Hashtbl.replace !path_set (start_x, start_y) ();
-    Animate.current_x := float_of_int start_x; Animate.current_y := float_of_int start_y;
     is_path_building := true;
+    Animate.current_x := float_of_int start_x; Animate.current_y := float_of_int start_y;
     Option.iter (fun cb -> cb ()) render_callback;
 
-  
-    let rec build () =
-      let cx = int_of_float !Animate.current_x in
-      let cy = int_of_float !Animate.current_y in
-      let temp = if optimized then temperature_func (total_cells - unvisited_count ()) total_cells else 1.0 in
-      match random_neighbor ~temperature:temp maze cx cy with
-      | None -> () (* should not happen *)
+    let rec build_walk () =
+      let (cx, cy) = List.hd !current_path in
+      let neighbor_choice =
+        if biased then random_neighbor_biased ~temperature:1.0 maze cx cy
+        else random_neighbor maze cx cy
+      in
+      match neighbor_choice with
+      | None -> ()
       | Some (nx, ny) ->
           animate_movement cx cy nx ny render_callback 2;
           if Hashtbl.mem !path_set (nx, ny) then (
-            let rec trim () =
-              match !current_path with
-              | [] -> ()
-              | (x, y) :: tl ->
-                  if x = nx && y = ny then ()
-                  else (
-                    current_path := tl;
-                    Hashtbl.remove !path_set (x, y);
-                    trim () )
+            let rec trim_path = function
+              | [] -> []
+              | (px, py) as head :: tail ->
+                  if px = nx && py = ny then head :: tail
+                  else (Hashtbl.remove !path_set (px, py); trim_path tail)
             in
-            trim ()
+            current_path := trim_path !current_path
           ) else (
             current_path := (nx, ny) :: !current_path;
-            Hashtbl.replace !path_set (nx, ny) ()
+            Hashtbl.replace !path_set (nx, ny) ();
           );
-          Animate.current_x := float_of_int nx; Animate.current_y := float_of_int ny;
+          Animate.current_x := float_of_int nx;
+          Animate.current_y := float_of_int ny;
           Option.iter (fun cb -> cb ()) render_callback;
-          if maze.cells.(nx).(ny).visited then () else build ()
+          if not maze.cells.(nx).(ny).visited then build_walk ()
     in
-    build ();
+    build_walk ();
 
-  
-    let path_forward = List.rev !current_path in
-    let rec carve_pairs = function
+    let path_to_carve = List.rev !current_path in
+    let rec carve_path_pairs = function
       | [] | [_] -> ()
-      | (x1, y1) :: (x2, y2) :: tl ->
+      | (x1, y1) :: (x2, y2) :: tail ->
           Util.knock_down_wall maze (x1, y1) (x2, y2);
+          maze.cells.(x1).(y1).visited <- true;
           animate_movement x1 y1 x2 y2 render_callback 2;
-          carve_pairs ((x2, y2) :: tl)
+          carve_path_pairs ((x2, y2) :: tail)
     in
-    carve_pairs path_forward;
-    List.iter (fun (x, y) -> maze.cells.(x).(y).visited <- true) path_forward;
+    carve_path_pairs path_to_carve;
+    List.iter (fun (x,y) -> maze.cells.(x).(y).visited <- true) path_to_carve;
     is_path_building := false;
     Option.iter (fun cb -> cb ()) render_callback;
   done;
 
- 
   Array.iter (Array.iter (fun c -> c.visited <- false)) maze.cells;
   maze.start_x <- 0; maze.start_y <- 0;
   maze.end_x <- maze.width - 1; maze.end_y <- maze.height - 1;
