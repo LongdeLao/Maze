@@ -20,7 +20,7 @@ jobs:
         run: |
           sudo apt-get clean
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libsdl2-image-dev xvfb
+          sudo apt-get install -y libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev xvfb
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v2
