@@ -32,6 +32,7 @@
 
 open Maze
 open Animate
+open Util  (* Added this to make the knock_down_wall function available *)
 
 let () = Printexc.record_backtrace true
 
@@ -85,35 +86,14 @@ let merge_sets cell_sets set1 set2 =
   if Hashtbl.mem cell_sets.members remove_id then
     Hashtbl.remove cell_sets.members remove_id
 
-(** Remove walls between two adjacent cells *)
-let remove_walls maze (x1, y1) (x2, y2) =
-  if x2 = x1 + 1 && y2 = y1 then begin
-    (* Remove right wall of (x1,y1) and left wall of (x2,y2) *)
-    maze.cells.(x1).(y1).right_wall <- false;
-    maze.cells.(x2).(y2).left_wall <- false;
-  end
-  else if x2 = x1 - 1 && y2 = y1 then begin
-    (* Remove left wall of (x1,y1) and right wall of (x2,y2) *)
-    maze.cells.(x1).(y1).left_wall <- false;
-    maze.cells.(x2).(y2).right_wall <- false;
-  end
-  else if x2 = x1 && y2 = y1 + 1 then begin
-    (* Remove bottom wall of (x1,y1) and top wall of (x2,y2) *)
-    maze.cells.(x1).(y1).bottom_wall <- false;
-    maze.cells.(x2).(y2).top_wall <- false;
-  end
-  else if x2 = x1 && y2 = y1 - 1 then begin
-    (* Remove top wall of (x1,y1) and bottom wall of (x2,y2) *)
-    maze.cells.(x1).(y1).top_wall <- false;
-    maze.cells.(x2).(y2).bottom_wall <- false;
-  end
+(* removed local remove_walls; rely on Util.knock_down_wall *)
 
 (** Connect two cells by removing the wall between them *)
 let connect_cells maze cell_sets (x1, y1) (x2, y2) =
   let set1 = get_or_create_set cell_sets x1 y1
   and set2 = get_or_create_set cell_sets x2 y2 in
   (* Remove the wall between the cells *)
-  remove_walls maze (x1, y1) (x2, y2);
+  Util.knock_down_wall maze (x1, y1) (x2, y2);
   (* Merge their sets *)
   merge_sets cell_sets set1 set2
 
@@ -222,8 +202,7 @@ let generate maze ?render_callback () =
               let x2, y2 = x, y+1 in
               debug (Printf.sprintf "Creating vertical connection from (%d,%d) to (%d,%d)" x1 y1 x2 y2);
               (* Remove the bottom wall and propagate set ID *)
-              maze.cells.(x1).(y1).bottom_wall <- false;
-              maze.cells.(x2).(y2).top_wall <- false;
+              Util.knock_down_wall maze (x1, y1) (x2, y2);
               (* Add the cell below to the same set *)
               Hashtbl.replace cell_sets.sets (x2, y2) set_id;
               let members = 
